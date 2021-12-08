@@ -1,6 +1,10 @@
 const express = require("express");
 const app = express();
 
+const connexion = require("./lib/db");
+connexion.sync();
+
+
 // - - - - - //
 // Code here //
 // - - - - - //
