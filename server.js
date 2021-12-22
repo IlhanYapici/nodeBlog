@@ -2,7 +2,6 @@ const express = require("express");
 const securityRouter = require("./routes/security");
 const userRouter = require("./routes/user");
 const articleRouter = require("./routes/article");
-const commentRouter = require("./routes/comment");
 const verifyWebToken = require("./middleware/verifyWebToken");
 const app = express();
 
@@ -22,6 +21,5 @@ app.use(express.json());
 app.use("", securityRouter);
 app.use("/users", userRouter);
 app.use("/articles", verifyWebToken, articleRouter);
-app.use("/comments", verifyWebToken, commentRouter);
 
 app.listen(3000, () => console.log("Server is listening."));
