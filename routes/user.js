@@ -61,12 +61,9 @@ router.get("", verifyWebToken, (req, res) => {
 });
 
 router.post("", (req, res) => {
-    if (req.body.isAdmin) return res.status(401).json({isAdmin: "You can't change that parameters"})
-    else {
-        User.create(req.body)
+    User.create(req.body)
         .then((user) => res.sendStatus(201))
         .catch(err => console.error(`User.post: ${err}`));
-    }
 });
 
 router.get("/:id", verifyWebToken, (req, res) => {
