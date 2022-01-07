@@ -9,12 +9,11 @@ function capitalize(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-// Comments
 router.post("/:id/comments", (req, res) => {
     const id = parseInt(req.params.id);
     Article.findByPk(id)
     .then(article => {
-        if (!article) res.sendStatus(404);
+        if (!article) return res.sendStatus(404);
         else {
             req.body.authorId = req.user.id;
             req.body.articleId = id;
@@ -26,12 +25,11 @@ router.post("/:id/comments", (req, res) => {
     .catch(err => console.error(err));
 });
 
-// Comments
 router.get("/:id/comments", (req, res) => {
     const id = parseInt(req.params.id);
     Article.findByPk(id)
     .then(article => {
-        if (!article) res.sendStatus(404);
+        if (!article) return res.sendStatus(404);
         else {
             Comment.findAll({
                 where: {
@@ -43,7 +41,6 @@ router.get("/:id/comments", (req, res) => {
     .catch(err => console.error(err));
 });
 
-// Comments
 router.get("/comments/:id", (req, res) => {
     const id = req.params.id;
     Comment.findByPk(id).then(async comment => {
@@ -59,37 +56,78 @@ router.get("/comments/:id", (req, res) => {
     .catch(err => console.error(err));
 });
 
-// Comments
-router.put("/comments/:id", (req, res) => {
+router.put("/comments/:id", async (req, res) => {
     const id = parseInt(req.params.id);
-    Comment.update(req.body, {
-        where: {
-            id: id
-        }
-    })
-    .then(([isUpdated]) => {
-        if (!isUpdated) res.sendStatus(404);
-        else Comment.findByPk(id).then((comment) => res.json(comment));
-    })
-    .catch(err => console.error(err));
+    if (req.user.isAdmin === false) {
+        await Comment.findByPk(id)
+        .then(article => {
+            if (!article) return res.sendStatus(401);
+            else if (article.authorId === req.user.id) {
+                Comment.update(req.body, {
+                    where: {
+                        id: id
+                    }
+                })
+                .then(([isUpdated]) => {
+                    if (!isUpdated) res.sendStatus(404);
+                    else Comment.findByPk(id).then((article) => res.json(article));
+                })
+                .catch(err => console.error(err));
+            }
+            else res.sendStatus(401);
+        })
+        .catch(err => console.error(err));
+    }
+    else {
+        Comment.update(req.body, {
+            where: {
+                id: id
+            }
+        })
+        .then(([isUpdated]) => {
+            if (!isUpdated) res.sendStatus(404);
+            else Comment.findByPk(id).then((comment) => res.json(comment));
+        })
+        .catch(err => console.error(err));
+    }
 });
 
-// Comments
-router.delete("/comments/:id", (req, res) => {
+router.delete("/comments/:id", async (req, res) => {
     const id = parseInt(req.params.id);
-    Comment.destroy({
-        where: {
-            id: id
-        }
-    })
-    .then((isDeleted) => {
-        if (!isDeleted) res.sendStatus(404);
-        else res.sendStatus(204);
-    })
-    .catch(err => console.error(err));
+    if (req.user.isAdmin === false) {
+        await Comment.findByPk(id)
+        .then(article => {
+            if (!article) return res.sendStatus(401);
+            else if (article.authorId === req.user.id) {
+                Comment.destroy({
+                    where: {
+                        id: id
+                    }
+                })
+                .then((isDeleted) => {
+                    if (!isDeleted) return res.sendStatus(404);
+                    else return res.sendStatus(204);
+                })
+                .catch(err => console.error(err));
+            }
+            else res.sendStatus(401);
+        })
+        .catch(err => console.error(err));
+    }
+    else {
+        Comment.destroy({
+            where: {
+                id: id
+            }
+        })
+        .then((isDeleted) => {
+            if (!isDeleted) return res.sendStatus(404);
+            else res.sendStatus(204);
+        })
+        .catch(err => console.error(err));
+    }
 });
 
-// Comments
 router.get("/comments", (req, res) => {
     const Query = req.query;
     if (!req.headers["authorid"] && !req.headers["articleid"]) {
@@ -194,7 +232,6 @@ router.get("/comments", (req, res) => {
     
 });
 
-// Articles
 router.get("/:id", (req, res) => {
     const id = parseInt(req.params.id);
     Article.findByPk(id)
@@ -216,10 +253,28 @@ router.get("/:id", (req, res) => {
     .catch(err => console.error(err));
 });
 
-// Articles
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
-    if (userPermission(req.user, "article", id, res) === false) return res.sendStatus(401);
+    if (req.user.isAdmin === false) {
+        await Article.findByPk(id)
+        .then(article => {
+            if (!article) return res.sendStatus(401);
+            else if (article.authorId === req.user.id) {
+                Article.update(req.body, {
+                    where: {
+                        id: id
+                    }
+                })
+                .then(([isUpdated]) => {
+                    if (!isUpdated) res.sendStatus(404);
+                    else Article.findByPk(id).then((article) => res.json(article));
+                })
+                .catch(err => console.error(err));
+            }
+            else res.sendStatus(401);
+        })
+        .catch(err => console.error(err));
+    }
     else {
         Article.update(req.body, {
             where: {
@@ -234,22 +289,42 @@ router.put("/:id", (req, res) => {
     }
 })
 
-// Articles
-router.delete("/:id", (req, res) => {
+router.delete("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
-    Article.destroy({
-        where: {
-            id: id
-        }
-    })
-    .then((isDeleted) => {
-        if (!isDeleted) res.sendStatus(404);
-        else res.sendStatus(204);
-    })
-    .catch(err => console.error(err));
+    if(req.user.isAdmin === false) {
+        await Article.findByPk(id)
+        .then(article => {
+            if (!article) return res.sendStatus(401);
+            else if (article.authorId === req.user.id) {
+                Article.destroy({
+                    where: {
+                        id: id
+                    }
+                })
+                .then((isDeleted) => {
+                    if (!isDeleted) return res.sendStatus(404);
+                    else return res.sendStatus(204);
+                })
+                .catch(err => console.error(err));
+            }
+            else res.sendStatus(401);
+        })
+        .catch(err => console.error(err));
+    }
+    else {
+        Article.destroy({
+            where: {
+                id: id
+            }
+        })
+        .then((isDeleted) => {
+            if (!isDeleted) return res.sendStatus(404);
+            else return res.sendStatus(204);
+        })
+        .catch(err => console.error(err));
+    }
 });
 
-// Articles
 router.get("", (req, res) => {
     if (!req.headers["title"] && !req.headers["tags"]) {
         const Query = req.query;
@@ -353,7 +428,6 @@ router.get("", (req, res) => {
     }
 });
 
-// Articles
 router.post("", (req, res) => {
     req.body.authorId = req.user.id;
     Article.create(req.body)
